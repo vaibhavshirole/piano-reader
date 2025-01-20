@@ -20,7 +20,7 @@ void setup() {
 
   // Initialize column pins as inputs with pull-up resistors
   for (int c = 0; c < NUM_COLS; c++) {
-    pinMode(colPins[c], INPUT_PULLUP);
+    pinMode(colPins[c], INPUT_PULLUP);  // Use 2-2.2k resistor in hardware
   }
 }
 
