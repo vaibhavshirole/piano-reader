@@ -1,0 +1,21 @@
+{
+  "name": "piano-reader",
+  "version": "1.0.0",
+  "description": "learn to read",
+  "homepage": "https://github.com/vaibhavshirole/piano-reader#readme",
+  "bugs": {
+    "url": "https://github.com/vaibhavshirole/piano-reader/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vaibhavshirole/piano-reader.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "sightreading.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": []
+}
