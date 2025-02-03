@@ -1,54 +1,114 @@
+#include <WiFi.h>
+#include <WebSocketsServer.h>
+
 #define NUM_ROWS 8
 #define NUM_COLS 8
 
-// Define GPIO pins for rows and columns
-int rowPins[NUM_ROWS] = {13, 12, 14, 27, 26, 25, 33, 32};
-int colPins[NUM_COLS] = {23, 22,  1,  3, 21, 19, 18,  5};
+// Wi-Fi credentials
+const char* ssid = "";
+const char* password = "";
+
+// Define row and column pins
+int rowPins[NUM_ROWS] = {32, 33, 25, 26, 27, 14, 12, 13}; // H1
+int colPins[NUM_COLS] = {23, 22, 21, 19, 18,  5, 17, 16}; // H2
+
+// Define musical notes for each grid position
+const char* noteGrid[NUM_ROWS][NUM_COLS] = {
+    {"X",   "X",    "X",    "C6",   "B5",   "A#5",  "A5",   "G#5"},
+    {"G5",  "F#5",  "F5",   "E5",   "D#5",  "D5",   "C#5",  "C5"},
+    {"B4",  "A#4",  "A4",   "G#4",  "G4",   "F#4",  "F4",   "E4"},
+    {"D#4", "D4",   "C#4",  "C4",   "B3",   "A#3",  "A3",   "G#3"},
+    {"G3",  "F#3",  "F3",   "E3",   "D#3",  "D3",   "C#3",  "C3"},
+    {"B2",  "A#2",  "A2",   "G#2",  "G2",   "F#2",  "F2",   "E2"},
+    {"D#2", "D2",   "C#2",  "C2",   "B1",   "A#1",  "A1",   "G#1"},
+    {"G1",  "F#1",  "F1",   "E1",   "D#1",  "D1",   "C#1",  "C1"}
+};
+
+// WebSocket server on port 81
+WebSocketsServer webSocket(81);
+
+// Function to handle WebSocket events
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+    switch (type) {
+        case WStype_CONNECTED:
+            Serial.printf("Client %u connected\n", num);
+            break;
+        case WStype_DISCONNECTED:
+            Serial.printf("Client %u disconnected\n", num);
+            break;
+        case WStype_TEXT:
+            Serial.printf("Received: %s\n", payload);
+            break;
+    }
+}
 
 void setup() {
-  Serial.begin(115200);
+    Serial.begin(115200);
 
-  // Configure row pins as outputs
-  for (int i = 0; i < NUM_ROWS; i++) {
-    pinMode(rowPins[i], OUTPUT);
-    digitalWrite(rowPins[i], HIGH); // Set all rows to HIGH initially
-  }
+    // Connect to Wi-Fi
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to Wi-Fi...");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("\nWi-Fi connected.");
+    Serial.print("ESP32 IP Address: ");
+    Serial.println(WiFi.localIP());
 
-  // Configure column pins as inputs with pull-ups
-  for (int i = 0; i < NUM_COLS; i++) {
-    pinMode(colPins[i], INPUT_PULLUP);
-  }
+    // Initialize row pins as outputs and set to HIGH (inactive)
+    for (int r = 0; r < NUM_ROWS; r++) {
+        pinMode(rowPins[r], OUTPUT);
+        digitalWrite(rowPins[r], HIGH);
+    }
+
+    // Initialize column pins as inputs with pull-up resistors
+    for (int c = 0; c < NUM_COLS; c++) {
+        pinMode(colPins[c], INPUT_PULLUP);
+    }
+
+    // Start WebSocket server
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
 }
 
 void loop() {
-  for (int r = 0; r < NUM_ROWS; r++) {
-    // Set the current row to LOW
-    digitalWrite(rowPins[r], LOW);
+    webSocket.loop();
 
-    // Debugging: Log the state of all columns
-//    for (int c = 0; c < NUM_COLS; c++) {
-//      int state = digitalRead(colPins[c]);
-//      Serial.print("Row ");
-//      Serial.print(r);
-//      Serial.print(", Column ");
-//      Serial.print(c);
-//      Serial.print(": ");
-//      Serial.println(state);
-//    }
+    // Create a grid to store key states
+    int grid[NUM_ROWS][NUM_COLS] = {0};
+    bool anyKeyPressed = false;
 
-    // Check all columns for a key press
-    for (int c = 0; c < NUM_COLS; c++) {
-      if (digitalRead(colPins[c]) == LOW) {
-        Serial.print("Key pressed: Row ");
-        Serial.print(r);
-        Serial.print(", Column ");
-        Serial.println(c);
-      }
+    // Scan the matrix
+    for (int r = 0; r < NUM_ROWS; r++) {
+        digitalWrite(rowPins[r], LOW);
+        for (int c = 0; c < NUM_COLS; c++) {
+            if (digitalRead(colPins[c]) == LOW) {
+                grid[r][c] = 1;
+                anyKeyPressed = true;
+            }
+        }
+        digitalWrite(rowPins[r], HIGH);
     }
 
-    // Reset the current row to HIGH
-    digitalWrite(rowPins[r], HIGH);
-  }
+    // Prepare data to send
+    String message = "Pressed Notes: ";
+    for (int r = 0; r < NUM_ROWS; r++) {
+        for (int c = 0; c < NUM_COLS; c++) {
+            if (grid[r][c] == 1) {
+                message += noteGrid[r][c];
+                message += " ";
+            }
+        }
+    }
 
-  delay(100); // Small delay to stabilize readings
+    // If no keys were pressed, send a "No keys pressed" message
+    if (!anyKeyPressed) {
+        message = "No keys pressed";
+    }
+
+    // Send the message via WebSocket
+    webSocket.broadcastTXT(message);
+
+    delay(500);  // Update frequency (0.5 seconds)
 }
