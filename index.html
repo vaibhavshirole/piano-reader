@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 WebSocket Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #data { font-size: 20px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>ESP32 WebSocket Data</h1>
+    <div id="status">Connecting...</div>
+    <div id="data">No data received yet</div>
+
+    <script>
+        let ws;
+        
+        function connectWebSocket() {
+            ws = new WebSocket('ws://192.168.0.132:81'); // Replace with ESP32's IP address
+            
+            ws.onopen = function() {
+                document.getElementById('status').innerText = "Connected";
+            };
+            
+            ws.onmessage = function(event) {
+                document.getElementById('data').innerText = event.data;
+            };
+            
+            ws.onclose = function() {
+                document.getElementById('status').innerText = "Disconnected, retrying...";
+                setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
+            };
+        }
+        
+        connectWebSocket();
+    </script>
+</body>
+</html>
