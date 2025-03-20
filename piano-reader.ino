@@ -75,8 +75,10 @@ void setup() {
 void loop() {
     webSocket.loop();
 
+    static int lastGrid[NUM_ROWS][NUM_COLS] = {0}; // Stores previous key states
     int grid[NUM_ROWS][NUM_COLS] = {0};
     bool anyKeyPressed = false;
+    bool changed = false; // Track if a key state has changed
 
     // Scan the matrix
     for (int r = 0; r < NUM_ROWS; r++) {
@@ -86,26 +88,31 @@ void loop() {
                 grid[r][c] = 1;
                 anyKeyPressed = true;
             }
+            // Detect if the state of any key has changed
+            if (grid[r][c] != lastGrid[r][c]) {
+                changed = true;
+            }
         }
         digitalWrite(rowPins[r], HIGH);
     }
 
-    // Prepare data to send, delimited with ",": C2,D2,E2
-    String message = "";
-    for (int r = 0; r < NUM_ROWS; r++) {
-        for (int c = 0; c < NUM_COLS; c++) {
-            if (grid[r][c] == 1) {
-                message += noteGrid[r][c];
-                message += ",";
+    // If there's a change in key state, send data
+    if (changed) {
+        String message = "";
+        for (int r = 0; r < NUM_ROWS; r++) {
+            for (int c = 0; c < NUM_COLS; c++) {
+                if (grid[r][c] == 1) {
+                    message += noteGrid[r][c];
+                    message += " ";
+                }
+                lastGrid[r][c] = grid[r][c]; // Update last known state
             }
         }
-    }
 
-    // If no keys are pressed, send "R"
-    if (!anyKeyPressed) {
-        message = "R";
+        // Send empty if nothing pressed
+        if (!anyKeyPressed) {
+            message = "";
+        }
+        webSocket.broadcastTXT(message);
     }
-
-    // Send the data continuously with no delay
-    webSocket.broadcastTXT(message);
 }
