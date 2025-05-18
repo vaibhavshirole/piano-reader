@@ -21,15 +21,15 @@ end note
 
 ' --- User Interaction & Display ---
 User -up-> HTML_Display : "Views Staff & Notes\nInteracts (potentially)"
-HTML_Display <- CSS_Styler : "Styling"
+HTML_Display <-left- CSS_Styler : "Styling"
 HTML_Display <- DOM_Updater_JS : "Receives UI Updates"
 
 
 ' --- Data Flow & Control ---
-ESP32_Server -down-> WS_Client_JS : "WebSocket: Key Event Data\n(e.g., {row, col, state})"
-WS_Client_JS --> App_JS : "Passes Raw Key Data"
-App_JS --> Core_WASM : "Invokes with Key Data\n(for processing)"
-Core_WASM --> App_JS : "Returns Processed Info\n(e.g., note_id, feedback_type)"
-App_JS --> DOM_Updater_JS : "Commands UI Update\nwith Processed Info"
+ESP32_Server -right-> WS_Client_JS : "WebSocket: Key Event Data\n(e.g., {row, col, state})"
+WS_Client_JS -right-> App_JS : "Passes Raw Key Data"
+App_JS -down-> Core_WASM : "Invokes with Key Data\n(for processing)"
+Core_WASM -down-> App_JS : "Returns Processed Info\n(e.g., note_id, feedback_type)"
+App_JS -down--> DOM_Updater_JS : "Commands UI Update\nwith Processed Info"
 
 @enduml

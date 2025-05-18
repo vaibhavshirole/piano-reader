@@ -1,6 +1,5 @@
-@startuml Embedded System Design - M2 Passive Simplified
-
-title Embedded System: M1 (Active Scan) & M2 (Passive Listen - Simplified Firmware)
+@startuml
+title Embedded System: M1 (Active Scan) & M2 (Passive Listen)
 
 actor User
 actor "Web Browser Client" as BrowserClient
@@ -19,33 +18,35 @@ package "M2 (ESP32 - Piano Reader)" {
   component "M2_GPIO (16 High-Z Inputs)" as M2_GPIO_Inputs
   component "M2_WiFi_Module" as M2_Wifi
 
-  package "M2 Firmware (Simplified)" {
-    component "InputSampler" as M2_InputSampler
-    component "GridReconstructor" as M2_GridReconstructor
-    component "StateChangeDetector" as M2_StateDetector
-    component "WebSocketBroadcaster" as M2_WsBroadcaster
+  package "M2 Firmware (Simplified)" as M2_Firmware_Package {
+    component "Firmware_Process_Flow" as M2_ProcessFlow
+    note right of M2_ProcessFlow
+      **Key Processing Logic:**
+      1. Sample raw data at Nyquist frequency
+         from the 16 wires shared by M1.
+      2. Interpret Row (scan) & Column (sense) States.
+      3. Construct `currentGrid[][]`.
+      4. Compare `currentGrid` with `lastGrid`.
+      5. If (State Changed?):
+         - Format Note Data String.
+         - Send WebSocket Message via WiFi.
+      6. Else:
+         - Do nothing or minimal processing.
+    end note
   }
 }
 
 
 ' --- Physical Interactions & Connections ---
 User -right-> Matrix : "Presses Key(s)"
-
 M1_GPIO -up-> Matrix : "Drives Rows (Active LOW)\nSenses Columns"
-
-' M2 Passively Listens to the SAME Matrix Lines
 Matrix -left-> M2_GPIO_Inputs : "Row & Column Electrical States\n(Shared with M1)"
-
 
 ' --- M1 Internal Flow (Simplified) ---
 M1_Scanner -> M1_GPIO
 
 ' --- M2 Firmware Data Flow (Simplified) ---
-M2_GPIO_Inputs --> M2_InputSampler : "Raw states of 16 lines"
-M2_InputSampler --> M2_GridReconstructor : "Row & Column states"
-M2_GridReconstructor --> M2_StateDetector : "Constructed `currentGrid[][]`"
-M2_StateDetector --> M2_WsBroadcaster : "'changed' status & Note Data"
-M2_WsBroadcaster --> M2_Wifi : "Sends WebSocket Message"
+M2_GPIO_Inputs --> M2_ProcessFlow : "Raw states of 16 lines"
+M2_ProcessFlow --> M2_Wifi : "Data for WebSocket Message"
 M2_Wifi -right-> BrowserClient : "String of Active Notes / Empty String\n(via Network)"
-
 @enduml
