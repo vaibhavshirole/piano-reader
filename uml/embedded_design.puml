@@ -1,0 +1,51 @@
+@startuml Embedded System Design - M2 Passive Simplified
+
+title Embedded System: M1 (Active Scan) & M2 (Passive Listen - Simplified Firmware)
+
+actor User
+actor "Web Browser Client" as BrowserClient
+
+' --- Shared Keyboard Hardware ---
+component "Keyboard Matrix (16 pins, 8x8 grid)" as Matrix
+
+' --- M1: Original Keyboard Microcontroller ---
+package "M1 (Existing Keyboard MCU)" {
+  component "M1_GPIO" as M1_GPIO
+  component "M1_Matrix_Scanner" as M1_Scanner
+}
+
+' --- M2: ESP32 - Passive Listener ---
+package "M2 (ESP32 - Piano Reader)" {
+  component "M2_GPIO (16 High-Z Inputs)" as M2_GPIO_Inputs
+  component "M2_WiFi_Module" as M2_Wifi
+
+  package "M2 Firmware (Simplified)" {
+    component "InputSampler" as M2_InputSampler
+    component "GridReconstructor" as M2_GridReconstructor
+    component "StateChangeDetector" as M2_StateDetector
+    component "WebSocketBroadcaster" as M2_WsBroadcaster
+  }
+}
+
+
+' --- Physical Interactions & Connections ---
+User -right-> Matrix : "Presses Key(s)"
+
+M1_GPIO -up-> Matrix : "Drives Rows (Active LOW)\nSenses Columns"
+
+' M2 Passively Listens to the SAME Matrix Lines
+Matrix -left-> M2_GPIO_Inputs : "Row & Column Electrical States\n(Shared with M1)"
+
+
+' --- M1 Internal Flow (Simplified) ---
+M1_Scanner -> M1_GPIO
+
+' --- M2 Firmware Data Flow (Simplified) ---
+M2_GPIO_Inputs --> M2_InputSampler : "Raw states of 16 lines"
+M2_InputSampler --> M2_GridReconstructor : "Row & Column states"
+M2_GridReconstructor --> M2_StateDetector : "Constructed `currentGrid[][]`"
+M2_StateDetector --> M2_WsBroadcaster : "'changed' status & Note Data"
+M2_WsBroadcaster --> M2_Wifi : "Sends WebSocket Message"
+M2_Wifi -right-> BrowserClient : "String of Active Notes / Empty String\n(via Network)"
+
+@enduml

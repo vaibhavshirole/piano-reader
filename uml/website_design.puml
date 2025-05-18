@@ -1,0 +1,35 @@
+@startuml Website Design (No Packages)
+
+title Website: Sight-Reading Interface
+
+actor "ESP32 WebSocket Server" as ESP32_Server
+actor User
+
+component "HTML Display" as HTML_Display
+component "CSS Styler" as CSS_Styler
+component "WebSocket Client (JS)" as WS_Client_JS
+component "Main Application (JS)" as App_JS
+component "DOM Updater (JS)" as DOM_Updater_JS
+component "Core Logic (WASM)" as Core_WASM
+
+note right of Core_WASM
+  Responsibilities:
+  - Map (row, col) to Note
+  - Manage Staff Logic
+  - Generate Feedback
+end note
+
+' --- User Interaction & Display ---
+User -up-> HTML_Display : "Views Staff & Notes\nInteracts (potentially)"
+HTML_Display <- CSS_Styler : "Styling"
+HTML_Display <- DOM_Updater_JS : "Receives UI Updates"
+
+
+' --- Data Flow & Control ---
+ESP32_Server -down-> WS_Client_JS : "WebSocket: Key Event Data\n(e.g., {row, col, state})"
+WS_Client_JS --> App_JS : "Passes Raw Key Data"
+App_JS --> Core_WASM : "Invokes with Key Data\n(for processing)"
+Core_WASM --> App_JS : "Returns Processed Info\n(e.g., note_id, feedback_type)"
+App_JS --> DOM_Updater_JS : "Commands UI Update\nwith Processed Info"
+
+@enduml
